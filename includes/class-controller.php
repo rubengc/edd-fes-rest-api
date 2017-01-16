@@ -60,6 +60,9 @@ class FES_Rest_API_Controller {
             }
         }
 
+
+        $values = $this->prepare_fields_for_save($values);
+
         // FES needs a nonce to process the form
         // Form is never rendered so we need to add it manually
         $_REQUEST['fes-' . $this->fes_form . '-form'] = wp_create_nonce( 'fes-' . $this->fes_form . '-form' );
@@ -77,11 +80,11 @@ class FES_Rest_API_Controller {
             if( $response['success'] == true ) {
                 // Success
                 $data['code'] = 'rest_save_form_' . $this->id . '_success';
+                $data['save_id'] = $form->save_id;
             } else {
                 // Error on submit
                 $data['code'] = 'rest_save_form_' . $this->id . '_failure';
                 $data['errors'] = $response['errors'];
-                $data['save_id'] = $form->save_id;
             }
         } else {
             // Something wrong happens
@@ -91,6 +94,10 @@ class FES_Rest_API_Controller {
         }
 
         return $data;
+    }
+
+    public function prepare_fields_for_save($values) {
+        return $values;
     }
 
     /**
@@ -111,6 +118,13 @@ class FES_Rest_API_Controller {
             if( $field->template() == 'action_hook' ) {
                 // Action hook fields needs define their own response
                 $response = apply_filters( 'edd_fes_rest_api_' . $field->name() . '_prepare_for_response', $response, $field_name );
+            } else if( $field->template() == 'featured_image' ) {
+                // Featured image aka post thumbnail
+                if(has_post_thumbnail( $item->ID )) {
+                    $response[$field_name] = wp_get_attachment_url( get_post_thumbnail_id( $item->ID ) );
+                } else {
+                    $response[$field_name] = '';
+                }
             } else {
                 $response[$field_name] = $field->get_field_value_frontend( $item->ID, get_current_user_id(), true );
             }
@@ -129,50 +143,36 @@ class FES_Rest_API_Controller {
 
             if( $field->template() == 'action_hook' ) {
                 // Action hook fields needs define their own schema
-                $schema = apply_filters( 'edd_fes_rest_api_' . $field->name() . '_schema', $schema, $field_name );
+                $schema = apply_filters( 'edd_fes_rest_api_' . $field->name() . '_schema', $schema, $field, $field_name );
             } else {
-                $schema[$field_name] = array(
-                    'description' => $field->characteristics['help'],
-                    'type' => $this->parse_template_to_type( $field->template() ),
-                    'required' => $field->required(),
-                    'sanitize_callback' => 'sanitize_text_field',
-                );
-
-                // Custom schema params based on field type
-                if ($field->template() == 'select') {
-                    $schema[$field_name]['enum'] = $field->characteristics['options'];
-                }
-
-                if ($field->template() == 'download_category') {
-                    $terms = get_terms(array(
-                        'taxonomy' => 'download_category',
-                        'hide_empty' => false,
-                        'parent' => null,
-                        'fields' => 'id=>name'
-                    ));
-
-                    $options = array();
-
-                    foreach($terms as $term_id => $term_name) {
-                        $options[$term_id] = $term_name;
-
-                        $children = get_term_children( $term_id, 'download_category' );
-
-                        if( ! is_wp_error( $children ) ) {
-                            foreach($children as $child_id) {
-                                $child_term = get_term_by( 'id', $child_id, 'download_category' );
-
-                                $options[$child_id] = '    ' . $child_term->name;
-                            }
-                        }
-                    }
-
-                    $schema[$field_name]['enum'] = $options;
-                }
+                $schema = $this->get_field_schema($schema, $field, $field_name);
             }
         }
 
         return apply_filters( 'edd_fes_rest_api_' . $this->id . '_schema', $schema );
+    }
+
+    /**
+     * Function to mask fields to use masked fields instead of Wordpress/EDD/FES fields (for example category instead of download_category)
+     *
+     * @return array
+     */
+    public function get_field_schema($schema, $field, $field_name) {
+        $schema[$field_name] = array(
+            'description' => $field->characteristics['help'],
+            'type' => $this->parse_template_to_type( $field->template() ),
+            'required' => $field->required(),
+            'sanitize_callback' => 'sanitize_text_field',
+        );
+
+        // Custom schema params based on field type
+
+        // Select
+        if ($field->template() == 'select') {
+            $schema[$field_name]['enum'] = $field->characteristics['options'];
+        }
+
+        return $schema;
     }
 
     public function get_form_fields( $item_id = false ) {

@@ -14,6 +14,7 @@
  */
 // Exit if accessed directly
 if( !defined( 'ABSPATH' ) ) exit;
+
 if( !class_exists( 'EDD_FES_Rest_API' ) ) {
 
     /**
@@ -89,6 +90,9 @@ if( !class_exists( 'EDD_FES_Rest_API' ) ) {
             // https://gist.github.com/ricomadiko/25e10a9f35f2f4cdf13550a97d8911ad
             remove_action( 'rest_api_init', 'create_initial_rest_routes', 0 );
             remove_action( 'rest_api_init', 'wp_oembed_register_route' );
+
+            // Adds an annotation on download page if download was created/updated thought API
+            add_action( 'edit_form_before_permalink', array( $this, 'download_label' ) );
         }
         /**
          * Internationalization
@@ -116,6 +120,52 @@ if( !class_exists( 'EDD_FES_Rest_API' ) ) {
             } else {
                 // Load the default language files
                 load_plugin_textdomain( 'edd-fes-rest-api', false, $lang_dir );
+            }
+        }
+
+        /**
+         * Adds an annotation on download page if download was created/updated thought API
+         *
+         * @access      public
+         * @since       1.0.0
+         * @param       WP_Post $post The current post
+         */
+        public function download_label( $post ) {
+            if($post->post_type == 'download') {
+                $created_from_api = get_post_meta( $post->ID, 'edd_fes_rest_api_created_from_api', true );
+                $updated_from_api = get_post_meta( $post->ID, 'edd_fes_rest_api_updated_from_api', true );
+
+                $box_text = ' from API';
+
+                if($created_from_api != '' && $updated_from_api != '') {
+                    $box_text = __( 'Created and updated from API', 'edd-fes-rest-api' );
+                } else if($created_from_api != '') {
+                    $box_text = __( 'Created from API', 'edd-fes-rest-api' );
+                } else if($updated_from_api != '') {
+                    $box_text = __( 'Updated from API', 'edd-fes-rest-api' );
+                }
+
+                if($box_text != '') {
+                    ?>
+                    <div id="edd-fes-rest-api-box" style="
+                        display: inline-block;
+                        float: right;
+                        height: 24px;
+                        line-height: 25px;
+                        padding: 0 10px 1px;
+                        font-size: 11px;
+                        font-weight: 500;
+                        margin: 0;
+                        -webkit-border-radius: 3px;
+                        border-radius: 3px;
+                        background-color: #90da36;
+                        border-bottom: 2px solid #76bb22;
+                        color: #fff;
+                    ">
+                        <span><?php echo $box_text; ?></span>
+                    </div>
+                    <?php
+                }
             }
         }
     }

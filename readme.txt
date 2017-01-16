@@ -16,6 +16,12 @@ Get a product: GET /fes/v1/products/id
 Update a product: POST /fes/v1/products/id
 Delete a product: DELETE /fes/v1/products/id
 
+Fields support:
+action_hook
+select
+download_category
+featured_image
+
 Profile endpoints:
 Get user profile: GET /fes/v1/profile
 Update user profile: POST /fes/v1/profile
@@ -24,11 +30,14 @@ Customization:
 Filters for namespace override
 Filters for mask fields (for example return/allow as parameter "category" for "download_category" field or "title" for "post_title" field)
 Filters for action_hook field
+Actions after insert/update product
+
+Features:
+Adds a label on edit download if has been created/updated from API
 
 TODO:
-Meta boxes to display if a product has been uploaded from API?
-Settings from FES setting page? (to override namespace or remove endpoints)???
-Support for all FES fields (for example, on download_category type in schema adds the enum parameter with available download categories)
+Support for all FES fields (for example, on download_category type in schema adds the enum parameter with available download categories), see "Fields support"
 Media upload (fields that requires media needs to use wp/v2/media endpoint, but we could handle this files and move to media library directly and assign the attachment id)
+Settings from FES setting page? (to override namespace or remove endpoints)???
 Improve permissions check (This is based on FES, so always needs a validated vendor account)
-Earnings endpoints
+Earnings(Orders and commissions) endpoints

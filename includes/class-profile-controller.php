@@ -2,6 +2,8 @@
 /**
  * Profile Controller
  *
+ * Manages vendor profile endpoints on rest API
+ *
  * @package EDD\FES_Rest_API\profile_Controller
  */
 
